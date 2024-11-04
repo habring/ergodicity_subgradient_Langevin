@@ -19,55 +19,53 @@ class subgradient_Langevin(object):
         data_in.data = 0
         par.niter = 100000
         par.n_parallel_chains = int(500)
-        fac = .01*.5
-        par.reg_par = fac*200
-        par.data_par = fac
         par.noise = 0
         par.tau = 5e-3
-        par.ld = 1e-3
         par.check = 500
         par.save_every = 0
         par.metropolis_check = False
         par.folder = './'
 
-        #Data type: {'l1','l2sq','inpaint','I0'}
-        #par.F_name='l2sq'
-        par.F_name='l2sq'
-        par.G_name='l1'
+        par.F = []
+        par.G = []
         par.blur_kernel = np.ones([5,5])/25
         par.K = []
         par_parse(par_in,[par,data_in])
 
-
         x_0 = np.concatenate(par.n_parallel_chains*[data_in.u0[...,np.newaxis]],axis = -1)
         data = np.concatenate(par.n_parallel_chains*[data_in.data[...,np.newaxis]],axis = -1)
 
-        if len(data_in.u0.shape)==1:
-            if par.K==[]:
-                par.K = gradient_1d(x_0.shape)
+        # if len(data_in.u0.shape)==1:
+        #     if par.K==[]:
+        #         par.K = gradient_1d(x_0.shape)
 
-            par.F = nfun(par.F_name, npar=par.data_par, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
-            par.G = nfun(par.G_name, npar=par.reg_par, dims = tuple(range(len(data_in.u0.shape))))
+        #     par.F = nfun(par.F_name, npar=par.data_par, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
+        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = tuple(range(len(data_in.u0.shape))))
 
-        elif len(data_in.u0.shape)==2:
-            if par.K==[]:
-                par.K = gradient(x_0.shape)
+        # elif len(data_in.u0.shape)==2:
+        #     if par.K==[]:
+        #         par.K = gradient(x_0.shape)
 
-            par.F = nfun(par.F_name, npar=par.data_par, blur_kernel=par.blur_kernel, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
-            vdims = ()#2
-            dims = (0,1,2)
-            par.G = nfun(par.G_name, npar=par.reg_par, dims = dims,vdims=vdims)
+        #     par.F = nfun(par.F_name, npar=par.data_par, blur_kernel=par.blur_kernel, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
+        #     vdims = ()#2
+        #     dims = (0,1,2)
+        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = dims,vdims=vdims)
 
         self.par = par
         self.data_in = data_in
 
-
-    def metropolis_check(self, old, proposal, p_old_proposal, p_proposal_old):
-        acceptance_crit = ( - (self.par.F.val(proposal) + self.par.G.val(self.par.K.fwd(proposal))) + (self.par.F.val(old) + self.par.G.val(self.par.K.fwd(old)))).flatten()
-        acceptance_crit = acceptance_crit + p_proposal_old - p_old_proposal
+    # old and proposal are the old iterate and the proposed new one. p_old_given_proposal denotes the log 
+    # of the transition probability from the proposal to the old iterate wrt. the proposal transition kernel
+    # and p_proposal_given_old the opposite
+    def metropolis_check(self, old, proposal, p_old_given_proposal, p_proposal_given_old):
+        acceptance_crit = ( - (self.par.F.val(proposal) + self.par.G.val(self.par.K.fwd(proposal))) + 
+                            (self.par.F.val(old) + self.par.G.val(self.par.K.fwd(old)))).flatten()
+        acceptance_crit = acceptance_crit + p_old_given_proposal - p_proposal_given_old
+        # cap acceptance crit at 1 to avoid overflow in exp
+        acceptance_crit = np.minimum(1,acceptance_crit)
         acceptance_crit = np.exp(acceptance_crit)
-        acceptance_rate = np.random.uniform(low = 0., high = 1.,size = self.par.n_parallel_chains)
-        acceptance = (acceptance_crit>acceptance_rate)*1.0
+        acceptance = np.random.uniform(low = 0., high = 1.,size = self.par.n_parallel_chains)
+        acceptance = (acceptance_crit>acceptance)*1.0
         acc = np.copy(acceptance)
         acceptance = acceptance[np.newaxis,...]
         if len(self.data_in.u0.shape)==2:
@@ -85,9 +83,7 @@ class subgradient_Langevin(object):
 
         x_k = np.copy(x_0)
         if self.par.save_every:
-            np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                    'data_par_'+str(self.par.data_par)+'_'
-                                    'tau_'+str(self.par.tau)+'_x0.npy',x_0)
+            np.save(self.par.folder+'tau_'+str(self.par.tau)+'_x0.npy',x_0)
 
         if average_distribution:
             stopping_times = np.concatenate([np.random.randint(burnin, high = K+1,size = self.par.n_parallel_chains)[:,np.newaxis] for K in range(burnin,self.par.niter+1,min(self.par.niter,self.par.save_every))], axis=-1)
@@ -144,32 +140,22 @@ class subgradient_Langevin(object):
 
             if self.par.save_every:
                 if k%self.par.save_every==0:
-                    np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                        'data_par_'+str(self.par.data_par)+'_'
-                                        'tau_'+str(self.par.tau)+'_computation_times.npy',times)
+                    np.save(self.par.folder+'tau_'+str(self.par.tau)+'_computation_times.npy',times)
 
                 if k%self.par.save_every==0 and k>=burnin:
-                    np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                    'data_par_'+str(self.par.data_par)+'_'
-                                    'tau_'+str(self.par.tau)+'_'
+                    np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                     'iter_'+str(k)+'.npy',x_k_intermediate)
 
                     if average_distribution and k>=burnin: 
-                        np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                        'data_par_'+str(self.par.data_par)+'_'
-                                        'tau_'+str(self.par.tau)+'_'
+                        np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                         'iter_'+str(k)+'average_distribution.npy',sample[...,0])
                         sample = sample[...,1:]
                         stopping_times = stopping_times[...,1:]
 
                     if k>= burnin:
-                        np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                        'data_par_'+str(self.par.data_par)+'_'
-                                        'tau_'+str(self.par.tau)+'_'
+                        np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                         'iter_'+str(k)+'_mmse.npy',running_mmse)
-                        np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                        'data_par_'+str(self.par.data_par)+'_'
-                                        'tau_'+str(self.par.tau)+'_'
+                        np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                         'iter_'+str(k)+'_variance.npy',running_var_uncentered - running_mmse**2)
 
 
@@ -181,16 +167,11 @@ class subgradient_Langevin(object):
 
     def subgrad(self,burnin=0):
 
-
-        assert (not self.par.metropolis_check), "Metropolis correction not implemented for this algorithm"
-
         x_0 = np.concatenate(self.par.n_parallel_chains*[self.data_in.u0[...,np.newaxis]],axis = -1)
         x_k = np.copy(x_0)
 
         if self.par.save_every:
-            np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                    'data_par_'+str(self.par.data_par)+'_'
-                                    'tau_'+str(self.par.tau)+'_x0.npy',x_0)
+            np.save(self.par.folder+'tau_'+str(self.par.tau)+'_x0.npy',x_0)
 
         measure_times_of_this_many_iterates = 1000
         times = np.zeros(self.par.niter//measure_times_of_this_many_iterates)
@@ -208,11 +189,13 @@ class subgradient_Langevin(object):
             if self.par.check:
                 if k%self.par.check==0 and k>0:
                     if len(self.data_in.u0.shape)==2:
-                        f, axarr = plt.subplots(2)
-                        axarr[0].imshow(np.mean(x_k,axis=-1),cmap = 'gray')
-                        axarr[0].set_title('MMSE after '+str(k)+' iterations. '+str(x_k.shape[-1]))
-                        sns.heatmap(np.log(np.var(x_k,axis=-1)), ax = axarr[1])
-                        axarr[1].set_title('Marginal posterior variances')
+                        f, axarr = plt.subplots(2,2)
+                        axarr[0,0].imshow(np.mean(x_k,axis=-1),cmap = 'gray')
+                        axarr[0,0].set_title('MMSE after '+str(k)+' iterations. ')
+                        axarr[0,1].imshow(np.mean(x_0,axis=-1),cmap = 'gray')
+                        axarr[0,1].set_title('Data')
+                        sns.heatmap(np.log(np.var(x_k,axis=-1)), ax = axarr[1,0])
+                        axarr[1,0].set_title('Marginal posterior variances')
                         plt.show()
                     else:
                         f, axarr = plt.subplots(2,2)
@@ -226,32 +209,38 @@ class subgradient_Langevin(object):
             dt = time.time()
 
             Kx_k = self.par.K.fwd(x_k)
-            # compute subgradient of G at point Kx via prox
             subgrad_G = self.par.G.subgrad(Kx_k)
-            # subgrad step
             x_k_intermediate = x_k - self.par.tau*(self.par.F.subgrad(x_k) + self.par.K.adj(subgrad_G))
-            x_k = x_k_intermediate + np.sqrt(2*self.par.tau)*np.random.normal(size = x_k.shape)
+            gauss = np.sqrt(2*self.par.tau)*np.random.normal(size = x_k.shape)
+            x_k_proposed = x_k_intermediate + gauss
+
+            if self.par.metropolis_check:
+                Kx_k_proposed = self.par.K.fwd(x_k_proposed)
+                subgrad_G = self.par.G.subgrad(Kx_k)
+                x_k_proposed_reverse = x_k_proposed - self.par.tau*(self.par.F.subgrad(x_k_proposed) + self.par.K.adj(subgrad_G))
+
+                p_old_given_proposal = -1/(4*self.par.tau)*np.sum((x_k-x_k_proposed_reverse)**2,axis=tuple(range(len(x_k.shape)-1)))
+                p_proposal_given_old = -1/(4*self.par.tau)*np.sum(gauss**2,axis=tuple(range(len(x_k.shape)-1)))
+
+                x_k,_ = self.metropolis_check(x_k, x_k_proposed, p_old_given_proposal, p_proposal_given_old)
+            else:
+                x_k = x_k_proposed
+
 
             dt = time.time() - dt
             t = t + dt
 
             if self.par.save_every:
                 if k%self.par.save_every==0:
-                    np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                        'data_par_'+str(self.par.data_par)+'_'
-                                        'tau_'+str(self.par.tau)+'_computation_times.npy',times)
+                    np.save(self.par.folder+'tau_'+str(self.par.tau)+'_computation_times.npy',times)
 
                 if k%self.par.save_every==0 and k>=burnin:
-                    np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                    'data_par_'+str(self.par.data_par)+'_'
-                                    'tau_'+str(self.par.tau)+'_'
+                    np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                     'iter_'+str(k)+'.npy',x_k)
 
 
             if k==0:
-                np.save(self.par.folder+'reg_par_'+str(self.par.reg_par)+'_'
-                                    'data_par_'+str(self.par.data_par)+'_'
-                                    'tau_'+str(self.par.tau)+'_'
+                np.save(self.par.folder+'tau_'+str(self.par.tau)+'_'
                                     'iter_0.npy',x_0)
 
 
@@ -266,7 +255,6 @@ class MYULA(object):
 
         ##Set data
         data_in.u0 = 0 #Direct image input
-
         par.niter = 100000
         fac = .01*.5
         par.reg_par = fac*200
@@ -400,8 +388,6 @@ class MYULA(object):
 
         res = {'xk':x_k,'x0':x_0}
         return res
-
-
 
 
 

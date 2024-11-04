@@ -933,9 +933,31 @@ gauss_kernel = ( 1.0/np.sqrt(2.0*np.pi*sig*sig) )*np.exp( -(np.square(a1-mu) + n
 # different semynorm-type functionals for which we implement evaluation, proximal mapping, and subgradient explicitly
 class nfun(object):
 
-    def __init__(self,ntype,npar=1.0,mshift=0.0,dims=None,vdims=(), mask=False,eps=0.1,delta=1.0,l1eps_par=0.1, 
-                        blur_kernel = gauss_kernel, huber_alpha = 1.0, p=1.5):
+    def __init__(self,ntype='l2sq',npar=1.0,mshift=0.0,dims=None,vdims=(), mask=False,eps=0.1,delta=1.0,l1eps_par=0.1, 
+                        blur_kernel = gauss_kernel, huber_alpha = 1.0, p=1.5,F=[],G=[]):
         
+
+        if (not F==[]) and (not G==[]):
+            
+            self.npar = F.npar #Scalar mulitplier
+            self.ntype = F.ntype #Type of norm
+            self.mshift = F.mshift #Minus-shift: We consider N(x-mshift)
+            self.vdims = F.vdims #Variable that fixes some dimensions for particular norms
+            self.mask = F.mask #Mask for inpainting-norm
+            self.eps = F.eps #Parameter for semi-convex function
+            self.delta = F.delta #Second parameter for semi-convex function
+            self.l1eps_par = F.l1eps_par # Smoothing parameter for l1+eps norm
+            self.dims=F.dims # axis over which the norm is computed.
+            self.blur_kernel=F.blur_kernel
+            self.huber_alpha = F.huber_alpha
+            self.p = F.p
+
+            def val(x): return F.val(x)+G.val(x)
+            def prox(x,ppar): raise NotImplementedError
+            def subgrad(x):
+                return F.subgrad(x) + G.subgrad(x)
+
+
         self.npar = npar #Scalar mulitplier
         self.ntype = ntype #Type of norm
         self.mshift = np.copy(mshift) #Minus-shift: We consider N(x-mshift)
