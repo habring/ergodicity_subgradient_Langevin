@@ -32,21 +32,16 @@ We recommend simply using conda as an environment management system.
 4. Open the jupyter notebooks and evaluate the results.
 
 
-<!-- LICENSE -->
-## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+## Citation
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+If you use this code, please consider citing the paper
 
+@article{fruehwirth2024ergodicity,
+  title={Ergodicity of Langevin Dynamics and its Discretizations for Non-smooth Potentials},
+  author={Fruehwirth, Lorenz and Habring, Andreas},
+  journal={arXiv preprint arXiv:2411.12051},
+  year={2024}
+}
 
-
-<!-- CONTACT -->
-## Contact
-
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
-
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
