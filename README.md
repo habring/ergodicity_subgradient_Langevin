@@ -41,13 +41,14 @@ We recommend simply using conda as an environment management system.
 ## Citation
 
 If you use this code, please consider citing the paper
-
+```
 @article{fruehwirth2024ergodicity,
-  title={Ergodicity of Langevin Dynamics and its Discretizations for Non-smooth Potentials},
-  author={Fruehwirth, Lorenz and Habring, Andreas},
-  journal={arXiv preprint arXiv:2411.12051},
-  year={2024}
+title={Ergodicity of Langevin Dynamics and its Discretizations for Non-smooth Potentials},
+author={Fruehwirth, Lorenz and Habring, Andreas},
+journal={arXiv preprint arXiv:2411.12051},
+year={2024}
 }
+```
 
 ## Contact
 
