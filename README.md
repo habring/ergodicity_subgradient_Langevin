@@ -27,9 +27,14 @@ We recommend simply using conda as an environment management system.
 2. Install the relevant packages
    ```
    conda install numpy matplotlib scipy imageio ipython tqdm seaborn ipykernel
+   conda install conda-forge::pot
    ```
 3. Run `2d_example.py` and `imaging_example.py` with all relevant settings using `ipython 2d_example.py` and `ipython imaging_example.py` after adapting the corresponding lines of code at the top of the files.
-4. Open the jupyter notebooks and evaluate the results.
+4. In order to be able to choose the conda environment in your jupyter notebook run
+   ```
+   python -m ipykernel install --user --name=subgrad-ergodic-env
+   ```
+6. Open the jupyter notebooks and evaluate the results.
 
 
 
@@ -44,4 +49,6 @@ If you use this code, please consider citing the paper
   year={2024}
 }
 
+## Contact
 
+Please contact me under `habring<dot>andreas<at>gmail<dot>com` if there are anny issues or you have questions regarding the work.
