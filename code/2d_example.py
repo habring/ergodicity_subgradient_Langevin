@@ -9,9 +9,9 @@ import pandas as pd
 
 
 ## Choose your experimental setting
-method = 'subgrad' #'subgrad' 'prox' 'myula'
-G_name = 'lp_l1' # l1, lp_l1
-K_name = 'grad' # identity, grad
+method = 'subgrad' #'subgrad' 'prox' 'myula'        Choose the sampling method.
+G_name = 'lp_l1' # l1, lp_l1                        Choose the functional G; L1 norm or the mixed lp-l1 norm from the paper.
+K_name = 'grad' # identity, grad                    Choose the operator K wo use within the functional G as in the paper. Either identity, or grad for spatial gradient.
 F_name = 'l2sq'
 
 
@@ -22,8 +22,7 @@ sigma = 1
 u0 = gt+1
 niter = int(5001)
 niter = int(20001)
-# n_parallel_chains = int(1e4)
-n_parallel_chains = int(1)
+n_parallel_chains = int(1e4)
 metropolis_check = False
 save_every = 100
 check = 0

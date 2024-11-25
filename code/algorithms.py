@@ -34,22 +34,6 @@ class subgradient_Langevin(object):
         x_0 = np.concatenate(par.n_parallel_chains*[data_in.u0[...,np.newaxis]],axis = -1)
         data = np.concatenate(par.n_parallel_chains*[data_in.data[...,np.newaxis]],axis = -1)
 
-        # if len(data_in.u0.shape)==1:
-        #     if par.K==[]:
-        #         par.K = gradient_1d(x_0.shape)
-
-        #     par.F = nfun(par.F_name, npar=par.data_par, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
-        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = tuple(range(len(data_in.u0.shape))))
-
-        # elif len(data_in.u0.shape)==2:
-        #     if par.K==[]:
-        #         par.K = gradient(x_0.shape)
-
-        #     par.F = nfun(par.F_name, npar=par.data_par, blur_kernel=par.blur_kernel, mshift=data, dims = tuple(range(len(data_in.u0.shape))))
-        #     vdims = ()#2
-        #     dims = (0,1,2)
-        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = dims,vdims=vdims)
-
         self.par = par
         self.data_in = data_in
 
@@ -98,25 +82,6 @@ class subgradient_Langevin(object):
                 times[k//measure_times_of_this_many_iterates-1] = t
                 t = 0
         
-            if self.par.check:
-                if k%self.par.check==0 and k>burnin:
-                    if len(self.data_in.u0.shape)==2:
-                        f, axarr = plt.subplots(3)
-                        axarr[0].imshow(np.mean(running_mmse,axis=-1),cmap = 'gray')
-                        axarr[0].set_title('MMSE after '+str(k)+' iterations')
-                        axarr[1].imshow(np.mean(x_0,axis=-1),cmap = 'gray')
-                        axarr[1].set_title('Initial')
-                        axarr[2].imshow(np.mean(running_var_uncentered-running_mmse**2,axis=-1),cmap = 'hot')
-                        axarr[2].set_title('Marginal posterior variances')
-                        plt.show()
-                    else:
-                        f, axarr = plt.subplots(2,2)
-                        axarr[0,0].plot(np.mean(x_k_intermediate,axis=-1))
-                        axarr[0,0].set_title('MMSE after '+str(k)+' iterations')
-                        axarr[0,1].plot(np.var(x_k_intermediate,axis=-1))
-                        axarr[1,0].plot(np.mean(x_0,axis=-1))
-                        plt.show()
-            
             
             dt = time.time()
 
@@ -182,26 +147,6 @@ class subgradient_Langevin(object):
             if k%measure_times_of_this_many_iterates==0 and k>0:
                 times[k//measure_times_of_this_many_iterates-1] = t
                 t = 0
-
-            if self.par.check and k >= burnin:
-                if k%self.par.check==0 and k>0:
-                    if len(self.data_in.u0.shape)==2:
-                        f, axarr = plt.subplots(2,2)
-                        axarr[0,0].imshow(np.mean(running_mmse,axis=-1),cmap = 'gray')
-                        axarr[0,0].set_title('MMSE after '+str(k)+' iterations. ')
-                        axarr[0,1].imshow(np.mean(x_0,axis=-1),cmap = 'gray')
-                        axarr[0,1].set_title('Data')
-                        sns.heatmap(np.log(np.squeeze(running_var_uncentered-running_mmse**2)), ax = axarr[1,0])
-                        axarr[1,0].set_title('Marginal posterior variances')
-                        plt.show()
-
-                    else:
-                        f, axarr = plt.subplots(2,2)
-                        axarr[0,0].plot(np.mean(sample[...,:stopping_time_index-1],axis=-1))
-                        axarr[0,0].set_title('MMSE after '+str(k)+' iterations. '+str(stopping_time_index))
-                        axarr[0,1].plot(np.var(sample[...,:stopping_time_index-1],axis=-1))
-                        axarr[1,0].plot(np.mean(x_0,axis=-1))
-                        plt.show()
 
 
             dt = time.time()
@@ -292,23 +237,6 @@ class MYULA(object):
 
         x_0 = np.concatenate(par.n_parallel_chains*[data_in.u0[...,np.newaxis]],axis = -1)
 
-        # if len(data_in.u0.shape)==1:
-        #     if par.K==[]:
-        #         par.K = gradient_1d(x_0.shape)
-
-        #     par.F = nfun(par.F_name, npar=par.data_par, mshift=x_0, dims = tuple(range(len(data_in.u0.shape))))
-        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = tuple(range(len(data_in.u0.shape))))
-
-        # elif len(data_in.u0.shape)==2:
-        #     if par.K==[]:
-        #         par.K = gradient(x_0.shape)
-
-        #     par.n_parallel_chains=1
-
-        #     par.F = nfun(par.F_name, npar=par.data_par, blur_kernel=par.blur_kernel, mshift=x_0, dims = tuple(range(len(data_in.u0.shape))))
-        #     vdims = ()#2
-        #     dims = (0,1,2)
-        #     par.G = nfun(par.G_name, npar=par.reg_par, dims = dims,vdims=vdims)
         
         self.par = par
         self.data_in = data_in
@@ -339,18 +267,6 @@ class MYULA(object):
             if k%measure_times_of_this_may_iterates==0 and k>0:
                 times[k//measure_times_of_this_may_iterates-1] = t
                 t = 0
-
-            if self.par.check:
-                if k%self.par.check==0 and k>burnin:
-                    if len(self.data_in.u0.shape)==2:
-                        f, axarr = plt.subplots(2,2)
-                        axarr[0,0].imshow(np.mean(running_mmse,axis=-1),cmap = 'gray')
-                        axarr[0,0].set_title('MMSE after '+str(k)+' iterations. ')
-                        axarr[0,1].imshow(np.mean(x_0,axis=-1),cmap = 'gray')
-                        axarr[0,1].set_title('Data')
-                        sns.heatmap(np.log(np.squeeze(running_var_uncentered-running_mmse**2)), ax = axarr[1,0])
-                        axarr[1,0].set_title('Marginal posterior variances')
-                        plt.show()
 
             dt = time.time()
 

@@ -9,11 +9,12 @@ import pandas as pd
 np.random.seed(0)
 
 
-method = 'subgrad' # 'subgrad' 'myula'
-F_name = '2d_l2blur' # 'l2sq' '2d_l2blur'
-G_name = 'l1'
-metropolis_check = True
-save_every = 500
+method = 'subgrad' # 'subgrad' 'myula'          Choose the sampling method
+F_name = '2d_l2blur' # 'l2sq' '2d_l2blur'       Choose the experiment: l2sq for denoising, 2d_l2blur for deconvolution
+metropolis_check = False  #                     metropolis check: This makes everything slower, but is used as a target for deconvolution
+save_every = 500                                
+G_name = 'l1'                                   
+
 check = 0
 n_parallel_chains = int(1)
 
