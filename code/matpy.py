@@ -1880,7 +1880,7 @@ def tv_denoise(**par_in):
     par.s_t_ratio = 1.0
     
     par.check=-1
-
+    par.stopping_eps = 1e-4
 
     ##Data and parmaeter parsing
     
@@ -1919,7 +1919,6 @@ def tv_denoise(**par_in):
 
     #Operator
     if len(u0.shape)==2:
-        gradient_1d 
         grad = gradient_1d(u0.shape)
     elif len(u0.shape)==3:
         grad = gradient(u0.shape)
@@ -1959,7 +1958,7 @@ def tv_denoise(**par_in):
         ux = dnrm.prox( u - par.tau*(grad.adj(p))   ,ppar=par.tau)    
 
 
-        stopping_criterion = (np.max(np.abs(2.0*(ux-u)))<1e-4)
+        stopping_criterion = (np.max(np.abs(2.0*(ux-u)))<par.stopping_eps)
 
         u = 2.0*ux - u
 

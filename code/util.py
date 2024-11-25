@@ -933,29 +933,9 @@ gauss_kernel = ( 1.0/np.sqrt(2.0*np.pi*sig*sig) )*np.exp( -(np.square(a1-mu) + n
 # different semynorm-type functionals for which we implement evaluation, proximal mapping, and subgradient explicitly
 class nfun(object):
 
-    def __init__(self,ntype='l2sq',npar=1.0,mshift=0.0,dims=None,vdims=(), mask=False,eps=0.1,delta=1.0,l1eps_par=0.1, 
+    def __init__(self,ntype='l2sq',npar=1.0,mshift=0.0,dims=None,vdims=(), mask=False,eps=0.0,delta=1.0,l1eps_par=0.1, 
                         blur_kernel = gauss_kernel, huber_alpha = 1.0, p=1.5,F=[],G=[]):
         
-
-        if (not F==[]) and (not G==[]):
-            
-            self.npar = F.npar #Scalar mulitplier
-            self.ntype = F.ntype #Type of norm
-            self.mshift = F.mshift #Minus-shift: We consider N(x-mshift)
-            self.vdims = F.vdims #Variable that fixes some dimensions for particular norms
-            self.mask = F.mask #Mask for inpainting-norm
-            self.eps = F.eps #Parameter for semi-convex function
-            self.delta = F.delta #Second parameter for semi-convex function
-            self.l1eps_par = F.l1eps_par # Smoothing parameter for l1+eps norm
-            self.dims=F.dims # axis over which the norm is computed.
-            self.blur_kernel=F.blur_kernel
-            self.huber_alpha = F.huber_alpha
-            self.p = F.p
-
-            def val(x): return F.val(x)+G.val(x)
-            def prox(x,ppar): raise NotImplementedError
-            def subgrad(x):
-                return F.subgrad(x) + G.subgrad(x)
 
 
         self.npar = npar #Scalar mulitplier
@@ -981,8 +961,6 @@ class nfun(object):
         #List of implemented types
         ntypes = ['l1','l2sq','2d_l2blur','huber','lp','l2sq_l1','lp_l1']
         
-        if ntype not in ntypes:
-            raise NameError('Unknown ntype: ' + ntype)
         
         #List of types that implement vdims
         vdims_types = ['l1']
@@ -1010,7 +988,7 @@ class nfun(object):
             def subgrad(x): return self.npar*(x-self.mshift)
 
         elif ntype == 'lp':
-            def val(x): return (1/p)*self.npar*np.sum(np.abs(x-self.mshift)**p,axis=self.dims)
+            def val(x): return (1/self.p)*self.npar*np.sum(np.abs(x-self.mshift)**self.p,axis=self.dims)
             def prox(x,ppar): 
                 assert self.p==1.5
 
@@ -1021,7 +999,7 @@ class nfun(object):
                 return prox_val
 
             def subgrad(x): 
-                return self.npar*np.sign(x-self.mshift)*np.abs(x-self.mshift)**(p-1)
+                return self.npar*np.sign(x-self.mshift)*np.abs(x-self.mshift)**(self.p-1)
 
 
         elif ntype == 'l2sq_l1':
@@ -1041,7 +1019,7 @@ class nfun(object):
 
         elif ntype == 'lp_l1':
             def val(x):
-                return self.npar*np.sum(np.abs(x-self.mshift)*(x-self.mshift>0) + 1/p*np.abs(x-self.mshift)**p*(x-self.mshift<0))
+                return self.npar*np.sum(np.abs(x-self.mshift)*(x-self.mshift>0) + 1/self.p*np.abs(x-self.mshift)**self.p*(x-self.mshift<0))
 
             def prox(x,ppar):
                 prox_val = lp_l1_prox(x-self.mshift,ppar*self.npar) + self.mshift
@@ -1050,7 +1028,7 @@ class nfun(object):
 
             def subgrad(x):
 
-                sg = self.npar*(1.0*(x-self.mshift>0) - np.abs(x-self.mshift)**(p-1)*(x-self.mshift<=0))
+                sg = self.npar*(1.0*(x-self.mshift>0) - np.abs(x-self.mshift)**(self.p-1)*(x-self.mshift<=0))
 
                 return sg
                 
@@ -1071,15 +1049,8 @@ class nfun(object):
 
             def val(x):
                 Fx = scipy.fft.fft2(x,norm='ortho',axes=(0,1))
-                return 0.5*self.npar*l2nsq( self.FK*Fx ,mshift=self.Fshift, dims = self.dims)
+                return 0.5*self.npar*l2nsq( self.FK*Fx ,mshift=self.Fshift, dims = self.dims) + 0.5*self.eps*l2nsq(x, dims = self.dims, mshift=self.mshift)
 
-
-            def prox(x,ppar):
-
-                Fx = scipy.fft.fft2(x,norm='ortho',axes=(0,1))
-                Fprox = proxl2f_with_forward_operator(Fx,K=self.FK,f=self.Fshift,tau=ppar*self.npar)
-                res = np.real(scipy.fft.ifft2(Fprox,norm='ortho',axes=(0,1)))
-                return res
 
             def subgrad(x):
                 Fx = scipy.fft.fft2(x,norm='ortho',axes=(0,1))
@@ -1087,7 +1058,10 @@ class nfun(object):
                 grad = np.conjugate(self.FK)*outer_grad
                 grad = np.real(scipy.fft.ifft2(grad,norm='ortho',axes=(0,1)))
 
-                return self.npar*grad
+                return self.npar*grad + self.eps*(x-self.mshift)
+
+            def prox(x):
+                raise NotImplementedError
 
             def test_prox():
                 x = 10*np.random.normal(size = self.mshift.shape)+np.pi
@@ -1230,6 +1204,7 @@ class identity(object):
         self.nrm = 1.0
         self.indim = list(shape)
         self.outdim = list(shape)
+        self.name='identity'
         
     def fwd(self,x):
 
@@ -1246,8 +1221,8 @@ class gradient_1d(object):
     
         self.indim = list(shape)
         self.outdim = self.indim
-        
         self.nrm = 2.0
+        self.name='gradient_1d'
         
     def fwd(self,x):
 
@@ -1295,6 +1270,8 @@ class gradient(object):
         
         self.oS = 2.0
         self.oT = 4.0
+
+        self.name='gradient'
         
     def fwd(self,x):
 
