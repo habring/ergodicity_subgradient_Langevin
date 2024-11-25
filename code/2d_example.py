@@ -29,7 +29,7 @@ check = 0
 data_par = 1/(sigma**2)
 reg_par = 5
 tau_list = [1e-5,1e-4, 1e-3, 1e-2,1e-1]
-save_all_iterates = True
+save_all_iterates = False
 
 # results folder
 folder = Path('results/2d_example/'+ G_name)
